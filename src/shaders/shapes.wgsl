@@ -1,6 +1,40 @@
 fn hit_sphere(center: vec3f, radius: f32, r: ray, record: ptr<function, hit_record>, max: f32)
 {
+  // (o + t d - c)·(o + t d - c) = R²
+  let oc     = r.origin - center;
+  let a      = dot(r.direction, r.direction);
+  let half_b = dot(oc, r.direction);
+  let c      = dot(oc, oc) - radius * radius;
 
+  let disc = half_b * half_b - a * c;
+  if (disc < 0.0) {
+    (*record).hit_anything = false;
+    return;
+  }
+
+  let sqrtD = sqrt(disc);
+
+  // Escolhe a raiz mais próxima dentro do intervalo [RAY_TMIN, max]
+  var t = (-half_b - sqrtD) / a;
+  if (t < RAY_TMIN || t > max) {
+    t = (-half_b + sqrtD) / a;
+    if (t < RAY_TMIN || t > max) {
+      (*record).hit_anything = false;
+      return;
+    }
+  }
+
+  // Preenche o hit_record
+  (*record).t = t;
+  let p = ray_at(r, t);
+  (*record).p = p;
+
+  // Normal orientada (frontface)
+  let outward = normalize((p - center) / radius);
+  let ff = dot(r.direction, outward) < 0.0;
+  (*record).frontface   = ff;
+  (*record).normal      = select(-outward, outward, ff);
+  (*record).hit_anything = true;
 }
 
 fn hit_quad(r: ray, Q: vec4f, u: vec4f, v: vec4f, record: ptr<function, hit_record>, max: f32)
