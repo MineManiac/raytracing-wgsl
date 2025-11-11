@@ -1,40 +1,40 @@
-fn hit_sphere(center: vec3f, radius: f32, r: ray, record: ptr<function, hit_record>, max: f32)
-{
-  // (o + t d - c)·(o + t d - c) = R²
-  let oc     = r.origin - center;
-  let a      = dot(r.direction, r.direction);
+fn hit_sphere(center: vec3f, radius: f32, r: ray, rec: ptr<function, hit_record>, t_max: f32) {
+  // Solve (o + t*d - c)^2 = R^2
+  let oc = r.origin - center;
+  let a  = dot(r.direction, r.direction);
   let half_b = dot(oc, r.direction);
-  let c      = dot(oc, oc) - radius * radius;
-
+  let c  = dot(oc, oc) - radius * radius;
   let disc = half_b * half_b - a * c;
+
   if (disc < 0.0) {
-    (*record).hit_anything = false;
+    (*rec).hit_anything = false;
     return;
   }
 
   let sqrtD = sqrt(disc);
 
-  // Escolhe a raiz mais próxima dentro do intervalo [RAY_TMIN, max]
+  // menor t válido
   var t = (-half_b - sqrtD) / a;
-  if (t < RAY_TMIN || t > max) {
+  if (t < RAY_TMIN || t > t_max) {
     t = (-half_b + sqrtD) / a;
-    if (t < RAY_TMIN || t > max) {
-      (*record).hit_anything = false;
+    if (t < RAY_TMIN || t > t_max) {
+      (*rec).hit_anything = false;
       return;
     }
   }
 
-  // Preenche o hit_record
-  (*record).t = t;
-  let p = ray_at(r, t);
-  (*record).p = p;
+  let p  = r.origin + t * r.direction;
+  let outward = (p - center) / radius;
 
-  // Normal orientada (frontface)
-  let outward = normalize((p - center) / radius);
+  // orienta normal contra o raio (frontface)
   let ff = dot(r.direction, outward) < 0.0;
-  (*record).frontface   = ff;
-  (*record).normal      = select(-outward, outward, ff);
-  (*record).hit_anything = true;
+  let n  = select(-outward, outward, ff);
+
+  (*rec).t           = t;
+  (*rec).p           = p;
+  (*rec).normal      = normalize(n);
+  (*rec).frontface   = ff;
+  (*rec).hit_anything = true;
 }
 
 fn hit_quad(r: ray, Q: vec4f, u: vec4f, v: vec4f, record: ptr<function, hit_record>, max: f32)
@@ -116,33 +116,56 @@ fn hit_triangle(r: ray, v0: vec3f, v1: vec3f, v2: vec3f, record: ptr<function, h
 
 fn hit_box(r: ray, center: vec3f, rad: vec3f, record: ptr<function, hit_record>, t_max: f32)
 {
-  var m = 1.0 / r.direction;
-  var n = m * (r.origin - center);
-  var k = abs(m) * rad;
+  // ignora box "vazio" (slots não usados no buffer)
+  if (rad.x <= 0.0 || rad.y <= 0.0 || rad.z <= 0.0) {
+    (*record).hit_anything = false;
+    return;
+  }
 
-  var t1 = -n - k;
-  var t2 = -n + k;
+  // Interseção AABB "slabs"
+  let invD = 1.0 / r.direction;
+  let n    = invD * (r.origin - center);
+  let k    = abs(invD) * rad;
 
-  var tN = max(max(t1.x, t1.y), t1.z);
-  var tF = min(min(t2.x, t2.y), t2.z);
+  let t1 = -n - k;   // entrada
+  let t2 = -n + k;   // saída
 
-  if (tN > tF || tF < 0.0)
-  {
-    record.hit_anything = false;
+  let tN = max(max(t1.x, t1.y), t1.z);
+  let tF = min(min(t2.x, t2.y), t2.z);
+
+  if (tN > tF || tF < 0.0) {
+    (*record).hit_anything = false;
     return;
   }
 
   var t = tN;
-  if (t < RAY_TMIN || t > t_max)
-  {
-    record.hit_anything = false;
+  if (t < RAY_TMIN || t > t_max) {
+    (*record).hit_anything = false;
     return;
   }
 
-  record.t = t;
-  record.p = ray_at(r, t);
-  record.normal = -sign(r.direction) * step(t1.yzx, t1.xyz) * step(t1.zxy, t1.xyz);
-  record.hit_anything = true;
+  // ponto e normal da face atingida
+  let p = r.origin + t * r.direction;
 
-  return;
+  let dx = abs(t - t1.x);
+  let dy = abs(t - t1.y);
+  let dz = abs(t - t1.z);
+
+  var outward = vec3f(0.0);
+  if (dx <= dy && dx <= dz) {
+    outward = vec3f(-sign(r.direction.x), 0.0, 0.0);
+  } else if (dy <= dx && dy <= dz) {
+    outward = vec3f(0.0, -sign(r.direction.y), 0.0);
+  } else {
+    outward = vec3f(0.0, 0.0, -sign(r.direction.z));
+  }
+
+  let ff   = dot(r.direction, outward) < 0.0;
+  let nfix = select(-outward, outward, ff);
+
+  (*record).t            = t;
+  (*record).p            = p;
+  (*record).frontface    = ff;
+  (*record).normal       = normalize(nfix);
+  (*record).hit_anything = true;
 }
