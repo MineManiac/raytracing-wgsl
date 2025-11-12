@@ -35,48 +35,51 @@ fn hit_sphere(center: vec3f, radius: f32, r: ray, rec: ptr<function, hit_record>
   (*rec).hit_anything = true;
 }
 
-fn hit_quad(r: ray, Q: vec4f, u: vec4f, v: vec4f, record: ptr<function, hit_record>, max: f32)
+
+fn hit_quad(r: ray, Q: vec4f, u: vec4f, v: vec4f, record: ptr<function, hit_record>, t_max: f32)
 {
-  var n = cross(u.xyz, v.xyz);
-  var normal = normalize(n);
-  var D = dot(normal, Q.xyz);
-  var w = n / dot(n.xyz, n.xyz);
+  let n = cross(u.xyz, v.xyz);
+  let nn = dot(n, n);
+  if (nn < 1e-12) {
+    (*record).hit_anything = false;
+    return;
+  }
+  let normal = normalize(n);
+  let D = dot(normal, Q.xyz);
 
-  var denom = dot(normal, r.direction);
-  if (abs(denom) < 0.0001)
-  {
-    record.hit_anything = false;
+  let denom = dot(normal, r.direction);
+  if (abs(denom) < 1e-6) {
+    (*record).hit_anything = false;
     return;
   }
 
-  var t = (D - dot(normal, r.origin)) / denom;
-  if (t < RAY_TMIN || t > max)
-  {
-    record.hit_anything = false;
+  let t = (D - dot(normal, r.origin)) / denom;
+  if (t <= RAY_TMIN || t >= min((*record).t, t_max)) {
+    (*record).hit_anything = false;
     return;
   }
 
-  var intersection = ray_at(r, t);
-  var planar_hitpt_vector = intersection - Q.xyz;
-  var alpha = dot(w, cross(planar_hitpt_vector, v.xyz));
-  var beta = dot(w, cross(u.xyz, planar_hitpt_vector));
+  let p = ray_at(r, t);
 
-  if (alpha < 0.0 || alpha > 1.0 || beta < 0.0 || beta > 1.0)
-  {
-    record.hit_anything = false;
+  // coordenadas (s,t) no retângulo Q + s*u + t*v, s,t ∈ [0,1]
+  let w = n / nn;
+  let planar = p - Q.xyz;
+  let s = dot(w, cross(planar, v.xyz));
+  let tt = dot(w, cross(u.xyz, planar));
+  let eps = 1e-4;
+  if (s < -eps || s > 1.0 + eps || tt < -eps || tt > 1.0 + eps) {
+    (*record).hit_anything = false;
     return;
   }
 
-  if (dot(normal, r.direction) > 0.0)
-  {
-    record.hit_anything = false;
-    return;
-  }
+  let ff   = dot(r.direction, normal) < 0.0;     // frontface?
+  let nfix = select(-normal, normal, ff);        // flip se for backface
 
-  record.t = t;
-  record.p = intersection;
-  record.normal = normal;
-  record.hit_anything = true;
+  (*record).t            = t;
+  (*record).p            = ray_at(r, t);
+  (*record).frontface    = ff;
+  (*record).normal       = normalize(nfix);
+  (*record).hit_anything = true;
 }
 
 fn hit_triangle(r: ray, v0: vec3f, v1: vec3f, v2: vec3f, record: ptr<function, hit_record>, max: f32)

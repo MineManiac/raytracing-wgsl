@@ -69,10 +69,18 @@ context.configure({ device: gpu, format: format, alphaMode: "premultiplied", usa
 
 // create the buffers
 const frameBufferSize = sizes.vec4 * uniforms.rez ** 2;
-const frameBuffer = await getComputeBuffer(gpu, frameBufferSize, GPUBufferUsage.STORAGE);
+const frameBuffer = await getComputeBuffer(
+  gpu,
+  frameBufferSize,
+  GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC
+);
 
 const rayTraceFrameBufferSize = sizes.vec4 * uniforms.rez ** 2;
-const rayTraceFrameBuffer = await getComputeBuffer(gpu, rayTraceFrameBufferSize, GPUBufferUsage.STORAGE);
+const rayTraceFrameBuffer = await getComputeBuffer(
+  gpu,
+  rayTraceFrameBufferSize,
+  GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
+);
 
 const uniformsBufferSize = sizes.f32 * uniformsCount;
 const uniformsBuffer = await getComputeBuffer(gpu, uniformsBufferSize, GPUBufferUsage.COPY_DST | GPUBufferUsage.STORAGE);
@@ -105,6 +113,31 @@ const objectBuffers = [
     { buffer: trianglesBuffer, type: "storage" }, 
     { buffer: meshesBuffer, type: "storage" }
 ];
+
+
+// --- helpers para limpar buffers e resetar acumulador ---
+const zerosCache = {
+  // a gente cria os arrays de zeros 1x e reaproveita
+  frame: null,
+  rtframe: null,
+};
+function zeroBuffer(buffer, sizeBytes) {
+  const n = sizeBytes / 4; // Float32
+  const mem = new Float32Array(n); // já nasce zerado
+  gpu.queue.writeBuffer(buffer, 0, mem);
+}
+function clearFramebuffersAndResetAccum() {
+  zeroBuffer(frameBuffer, frameBufferSize);
+  zeroBuffer(rayTraceFrameBuffer, rayTraceFrameBufferSize);
+  uniforms.frameCount = 0;
+  uniforms.shouldAccumulate = 0;
+  writeUniforms();
+  requestAnimationFrame(() => {
+    uniforms.shouldAccumulate = 1;
+    writeUniforms();
+  });
+}
+
 
 // bind group layout
 const { bindGroupLayout: objectsLayout, bindGroup: objectsBindGroup } = await getComputeBufferLayout(gpu, objectBuffers);
@@ -426,7 +459,7 @@ async function getScene(index)
     writeBuffers();
     writeUniforms();
     refreshObjectsGUI(0, true);
-    handleAccumulate(false);
+    clearFramebuffersAndResetAccum();
 }
 
 function setup()
@@ -461,11 +494,18 @@ function writeUniforms()
 
 function writeBuffer(buffer, size, objectList)
 {
+    // SEMPRE zera o buffer primeiro (evita lixo da cena anterior)
+    {
+        const zeros = new Float32Array(size / sizes.f32); // já zerado
+        gpu.queue.writeBuffer(buffer, 0, zeros);
+    }
+
     if (objectList.length == 0)
     {
+        // nada a escrever — mas o buffer já foi zerado, então OK
         return;
     }
-    
+
     var objectData = new Float32Array(size / sizes.f32);
     var offset = 0;
 
