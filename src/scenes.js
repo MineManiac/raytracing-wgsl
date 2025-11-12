@@ -362,55 +362,64 @@ async function Infinite() {
   };
 }
 
-async function Bunny()
-{
-    let offset = [0, -1, -2];
-    let spheres = [groundDefault];
-    spheres = spheres.concat(getSpheresRandom(3, offset));
+async function Bunny() {
+  const offset = [0, -1, -3.5];
 
-    let { verticesMesh, trianglesMesh, triangles } = await loadMesh('./media/stanford-bunny.obj');
-    
-    let meshes = [new Mesh([0, -1, -4], [2, 2, 2], [0, .2, 0], [0.4, 0.3, 0.6, 1.0], [1.0, 0.0, 0.5, 0.0], 0, 0, triangles.length)];
-    let { min, max } = getObjBoundingBox(verticesMesh);
-    meshes[0].setBoundingBox(min, max);
+  // chão difuso neutro
+  let spheres = [
+    new Sphere([0, -1001, 0], [0.7,0.7,0.7], 1000, [0.0,0.0,0.0,0.0]),
+  ];
 
-    return {
-        spheres, 
-        quads: [], 
-        boxes: [], 
-        triangles, 
-        meshes, 
-        backgroundColor1: [0.0, 0.5, 1.0], 
-        backgroundColor2: [1.0, 1.0, 1.0], 
-        focusDistance: 4.0, 
-        focusAngle: 0.2,
-        sunIntensity: 1.0,
-        samplesPerPixel: 1.0,
-        maxBounces: 10.0
-    };
+  // malha
+  const { verticesMesh, trianglesMesh, triangles } = await loadMesh('./media/stanford-bunny.obj');
+  // cor lilás e verniz: smooth≈0.98, fuzz=0, spec=0.6
+  let meshes = [
+    new Mesh([0+offset[0], 0.0+offset[1], -0.2+offset[2]],
+             [2.2, 2.2, 2.2], [0, 0.0, 0],
+             [0.62, 0.45, 0.90, 1.0], [0.98, 0.0, 0.60, 0.0],
+             0, 0, triangles.length)
+  ];
+  const { min, max } = getObjBoundingBox(verticesMesh);
+  meshes[0].setBoundingBox(min, max);
+
+  // bolinhas emissivas para highlights
+  spheres.push(new Sphere([-0.8, -0.2, -3.1], [1,1,1], 0.20, [0,0,0,3]));
+  spheres.push(new Sphere([ 0.9, -0.3, -3.0], [1,1,1], 0.15, [0,0,0,2]));
+
+  return {
+    spheres, quads: [], boxes: [], triangles, meshes,
+    backgroundColor1: [0.0, 0.5, 1.0], backgroundColor2: [1.0, 1.0, 1.0],
+    focusDistance: 3.6, focusAngle: 0.10,   // DOF leve
+    sunIntensity: 1.0,
+    samplesPerPixel: 12,
+    maxBounces: 12
+  };
 }
 
-async function Suzzanne()
-{
-    let { verticesMesh, trianglesMesh, triangles } = await loadMesh('./media/suzanne.obj');
-    let meshes = [new Mesh([0, 0.0, -6], [2, 2, 2], [0, 0, 0], [0.6, 0.3, 0.7, 1.0], [0.0, 0.0, 0.0, 0.0], 0, 0, triangles.length)];
-    let { min, max } = getObjBoundingBox(verticesMesh);
-    meshes[0].setBoundingBox(min, max);
+async function Suzzanne() {
+  const { verticesMesh, trianglesMesh, triangles } = await loadMesh('./media/suzanne.obj');
+  let meshes = [
+    new Mesh([0, 0.0, -5.0],
+             [2.2, 2.2, 2.2], [0, 0, 0],
+             [0.62, 0.45, 0.90, 1.0], [0.98, 0.0, 0.60, 0.0],
+             0, 0, triangles.length)
+  ];
+  const { min, max } = getObjBoundingBox(verticesMesh);
+  meshes[0].setBoundingBox(min, max);
 
-    return {
-        spheres: [], 
-        quads: [], 
-        boxes: [], 
-        triangles, 
-        meshes, 
-        backgroundColor1: [0.0, 0.5, 1.0], 
-        backgroundColor2: [1.0, 1.0, 1.0], 
-        focusDistance: 5.0, 
-        focusAngle: 0.2,
-        sunIntensity: 1.0,
-        samplesPerPixel: 1.0,
-        maxBounces: 10.0
-    };
+  let spheres = [
+    new Sphere([0, -1001, 0], [0.70,0.70,0.70], 1000, [0,0,0,0]),           // chão
+    new Sphere([1.2, 0.2, -4.0], [1,1,1], 0.25, [0,0,0,3.5]),               // spot emissivo
+  ];
+
+  return {
+    spheres, quads: [], boxes: [], triangles, meshes,
+    backgroundColor1: [0.0, 0.5, 1.0], backgroundColor2: [1.0, 1.0, 1.0],
+    focusDistance: 5.0, focusAngle: 0.08,
+    sunIntensity: 1.0,
+    samplesPerPixel: 12,
+    maxBounces: 12
+  };
 }
 
 async function Rotation() 

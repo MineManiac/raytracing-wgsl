@@ -1,47 +1,99 @@
-## WGSL Raytracer Template
-Template básico de um Ray Tracer em WGSL (WEBGPU). Tudo o que precisa para fazer o projeto esta aqui.
+# Projeto 3 — Ray Tracing em WGSL (WebGPU)
 
-### ⚠️ Atenção
+Implementação de um **ray tracer** em WGSL baseada no template do curso. O projeto cobre as rubricas de **D** a **B**, com materiais, primitivas e cenas variadas.
 
-O projeto provavelmente não vai rodar em linux, já que a GPU não fica acessível pro WGSL.
+![Preview](media/image.png)
 
-### Instruções
-Faça um fork do projeto, clone e abra no Visual Studio (ou outro software, mas recomendo esse)
+---
 
-Baixe (se no visual studio) -> **Name: Live Server - VS Marketplace Link:** [link para o marketplace](https://marketplace.visualstudio.com/items?itemName=ritwickdey.LiveServer)
+## Como rodar
 
-Aperte ```CTRL + Shift + P``` e selecione ```Live Server```. Um browser com o projeto rodando deve abrir.
+1. Clone o repositório e abra na sua IDE (VS Code recomendado).
+2. Instale a extensão **Live Server** (Ritwick Dey).
+3. Abra `index.html` com o Live Server (`Ctrl` + `Shift` + `P` → *Live Server: Open*).
+4. Use o painel lateral para escolher a cena e ajustar parâmetros (SPP, *bounces*, céu etc).
 
-### Funções para implementar/complementar (olhe a sessão de notas para mais detalhes)
-- ```hitsphere```
-- ```render```
-- ```trace```
-- ```check_ray_collision```
-- ```lambertian```
-- ```metal```
-- ```emmisive```
-- ```dielectric``` (quando smoothness < 0.0)
+---
 
-### Controles
-Você pode controlar qualquer parametro com o GUI ao lado.
+## Rubricas entregues (com prints)
 
-**Dica**: Você pode clicar no parametro e fazer um scroll para mudar ele de maneira smooth.
-Para mover a camera, use WASDQEXZ. Para rodar, use as setas.
+### D — “Basic”, “Metal”, “Fuzz”
 
-### Dicas
-Procure pelos comentários no código para te ajudar. Dê uma olhada nos outros arquivos ```.wgsl``` além do ```raytracer.wgsl```, várias funções que você vai precisar já estão disponíveis lá, prontas para usar.
+- **Basic**  
+  Ray casting com *background* em gradiente, correção de gama e interseção de esfera.  
+  Pequeno **bias** na origem dos raios secundários para evitar *shadow acne*.  
+  ![Basic](media/basic.png)
 
-⚠️ A especularidade é branca! Se na cena metálica você estiver vendo as cores erradas, procure fazer um ```mix``` entre a cor especular e a cor que vem do metalico e lambertiano.
+- **Metal**  
+  Reflexão especular perfeita com `reflect()`. Controle de *smoothness* para metais lisos.  
+  ![Metal](media/metal.png)
 
-### Nota
-You can compute your grade based on the scenes you managed to render. You can always check here (https://gubebra.itch.io/raytracing) to validate your implementation
-- D: ```"Basic", "Metal", "Fuzz"```
-- C: ```"Specular", "Emissive"```
-- C+: ```"Dielectric", "Spheres", "Night"```
-- B: ```"Cubes", "Cornell", "Mirror", "Infinite"```
-- B+: ```"Bunny", "Suzanne"``` e Crie uma cena nova
-- A: Adicione uma nova primitiva geometrica
-- A+: ```"Rotation", "Everything"```
+- **Fuzz**  
+  Metal “escovado”: reflexão com desvio aleatório (*fuzzy reflection*) controlado por parâmetro.  
+  ![Fuzz](media/fuzz.png)
 
-### Entrega:
-Via Blackboard, entregue o link do git.
+---
+
+### C — “Specular”, “Emissive”
+
+- **Specular**  
+  Mistura difuso–especular via probabilidade/força especular no material (espelho ideal quando liso).  
+  ![Specular](media/specular.png)
+
+- **Emissive**  
+  Superfícies emissivas contribuem diretamente para a radiância (quads/luzes de área).  
+  ![Emissive](media/emissive.png)
+
+---
+
+### C+ — “Dielectric”, “Spheres”, “Night”
+
+- **Dielectric**  
+  Refração com **Fresnel (aprox. de Schlick)**, IOR configurável e correção de *frontface* (normal invertida quando necessário).  
+  ![Dielectric](media/dielectric.png)
+
+- **Spheres**  
+  Cena com múltiplas esferas e materiais variados. Câmera com **DOF (thin lens)**: `aperture` e `focusDistance`.  
+  ![Spheres](media/spheres.png)
+
+- **Night**  
+  Ambiente noturno: *skybox* escuro, reduzindo contribuição do céu e enfatizando emissivos.  
+  ![Night](media/night.png)
+
+---
+
+### B — “Cubes”, “Cornell”, “Mirror”, “Infinite”
+
+- **Cubes**  
+  Caixas/AABB com materiais diversos (implementação funcional). 
+  ![Cubes](media/cubes.png)
+
+- **Cornell**  
+  Sala de Cornell (paredes difusas coloridas, objetos e luz retangular no teto).  
+  ![Cornell](media/cornell.png)
+
+- **Mirror**  
+  Cena dedicada a espelhos lisos (reflexão perfeita).  
+  ![Mirror](media/mirror.png)
+
+- **Infinite**  
+  “Quarto” com espelhos em múltiplas faces para reflexões repetidas.  
+  ![Infinite](media/infinite.png)
+
+---
+
+## Detalhes técnicos (resumo)
+
+- **Materiais**: difuso (Lambert), metal liso e *fuzzy*, especular ideal, emissivo e **dielétrico** (refração + Fresnel).
+- **Câmera**: modelo *thin lens* (DOF) com `aperture` e `focusDistance`.
+- **Acumulação progressiva**: somatório de amostras ao longo do tempo com *gamma correction*.
+- **Primitivas**: `Sphere`, `Quad`, `Box (AABB)`, `Triangle` e `Mesh` (suporte a OBJ).
+- **Estabilidade**: *safe normalize* e **bias** em raios secundários para evitar *acne* e auto-interseções.
+
+---
+
+
+## Referência
+
+Baseado no template: **Gustavobb/raytracing-wgsl-template**.  
+Consulte o enunciado do projeto para a correspondência entre cenas e nota.

@@ -33,16 +33,6 @@ fn rng_next_vec3_in_unit_disk(state: ptr<function, u32>) -> vec3<f32>
     return vec3(x, y, 0f);
 }
 
-fn rng_next_vec3_in_unit_sphere(state: ptr<function, u32>) -> vec3<f32>
-{
-    var z = 2.0 * rng_next_float(state) - 1.0;
-    var a = 2.0 * PI * rng_next_float(state);
-    var r = sqrt(1.0 - z * z);
-    var x = r * cos(a);
-    var y = r * sin(a);
-    return vec3(x, y, z);
-}
-
 fn sample_square(rngState: ptr<function, u32>) -> vec2f
 {
   return vec2f(rng_next_float(rngState), rng_next_float(rngState));

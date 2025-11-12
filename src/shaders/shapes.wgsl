@@ -35,7 +35,6 @@ fn hit_sphere(center: vec3f, radius: f32, r: ray, rec: ptr<function, hit_record>
   (*rec).hit_anything = true;
 }
 
-
 fn hit_quad(r: ray, Q: vec4f, u: vec4f, v: vec4f, record: ptr<function, hit_record>, t_max: f32)
 {
   let n = cross(u.xyz, v.xyz);
@@ -80,39 +79,6 @@ fn hit_quad(r: ray, Q: vec4f, u: vec4f, v: vec4f, record: ptr<function, hit_reco
   (*record).frontface    = ff;
   (*record).normal       = normalize(nfix);
   (*record).hit_anything = true;
-}
-
-fn hit_triangle(r: ray, v0: vec3f, v1: vec3f, v2: vec3f, record: ptr<function, hit_record>, max: f32)
-{
-  var v1v0 = v1 - v0;
-  var v2v0 = v2 - v0;
-  var rov0 = r.origin - v0;
-
-  var n = cross(v1v0, v2v0);
-  var q = cross(rov0, r.direction);
-
-  var d = 1.0 / dot(r.direction, n);
-
-  var u = d * dot(-q, v2v0);
-  var v = d * dot(q, v1v0);
-  var t = d * dot(-n, rov0);
-
-  if (u < 0.0 || u > 1.0 || v < 0.0 || (u + v) > 1.0)
-  {
-    record.hit_anything = false;
-    return;
-  }
-
-  if (t < RAY_TMIN || t > max)
-  {
-    record.hit_anything = false;
-    return;
-  }
-
-  record.t = t;
-  record.p = ray_at(r, t);
-  record.normal = normalize(n);
-  record.hit_anything = true;
 }
 
 fn hit_box(r: ray, center: vec3f, rad: vec3f, record: ptr<function, hit_record>, t_max: f32)

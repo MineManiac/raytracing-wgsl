@@ -158,12 +158,6 @@ fn refract_snell(I: vec3f, N: vec3f, eta: f32) -> vec3f {
   return r_out_perp + r_out_parallel;
 }
 
-fn schlick(cosine: f32, ref_idx: f32) -> f32 {
-  var r0 = (1.0 - ref_idx) / (1.0 + ref_idx);
-  r0 = r0 * r0;
-  return r0 + (1.0 - r0) * pow(1.0 - cosine, 5.0);
-}
-
 fn schlick_eta(cosine: f32, n1: f32, n2: f32) -> f32 {
   let r0 = pow((n1 - n2) / (n1 + n2), 2.0);
   return r0 + (1.0 - r0) * pow(1.0 - cosine, 5.0);
@@ -326,7 +320,6 @@ fn eval_material_for_hit(hit: hit_record, in_dir: vec3f, rng: ptr<function,u32>)
 
   // === Mirror perfeito (delta) ===
   if (is_perfect_mirror(m)) {
-    // Se quiser espelho neutro, use vec3(1.0). Se quiser “metal cromado colorido”, use albedo.
     let tint = hit.object_color.xyz;   // ou vec3f(1.0)
     let R = reflect(normalize(in_dir), normalize(hit.normal));
     return material_behaviour(true, tint, normalize(R));
@@ -374,7 +367,6 @@ fn trace(r_in: ray, rng_state: ptr<function, u32>) -> vec3f {
         
 
     // fundo
-
 
     // emissivo puro no hit
     let emitI = max(rec.object_material.w, 0.0);
@@ -516,7 +508,7 @@ fn trace(r_in: ray, rng_state: ptr<function, u32>) -> vec3f {
     throughput *= bhv.attenuation;
 
     // direção do próximo raio (com fallback anti-zero)
-    var newDir = bhv.new_dir;
+    var newDir = normalize(bhv.new_dir);
     let lenND  = length(newDir);
     if (lenND < 1e-8) {
       newDir = rec.normal;
@@ -525,9 +517,9 @@ fn trace(r_in: ray, rng_state: ptr<function, u32>) -> vec3f {
     }
 
     // empurra a origem na direção coerente ao lado da normal
-    let sign = select(-1.0, 1.0, dot(newDir, rec.normal) > 0.0);
+    let sign   = select(-1.0, 1.0, dot(newDir, rec.normal) > 0.0);
     let eps = select(1e-3, 2e-3, mirrorScene);
-    r_ = ray(rec.p + rec.normal * (sign * eps), newDir);
+    r_ = ray(rec.p + rec.normal * (sign * 1e-3), newDir);
 
     let mat = rec.object_material;
     let is_delta  = is_mirror || (mat.x < 0.0); // trata vidro como delta também
@@ -544,8 +536,6 @@ fn trace(r_in: ray, rng_state: ptr<function, u32>) -> vec3f {
 
   return radiance;
 }
-
-
 
 /* ================== KERNEL ================== */
 
