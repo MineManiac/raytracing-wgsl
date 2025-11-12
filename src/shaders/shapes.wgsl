@@ -23,17 +23,15 @@ fn hit_sphere(center: vec3f, radius: f32, r: ray, rec: ptr<function, hit_record>
     }
   }
 
-  let p  = r.origin + t * r.direction;
-  let outward = (p - center) / radius;
+  let p = r.origin + t * r.direction;
+  let outward = normalize((p - center) / radius);
 
-  // orienta normal contra o raio (frontface)
-  let ff = dot(r.direction, outward) < 0.0;
-  let n  = select(-outward, outward, ff);
-
-  (*rec).t           = t;
-  (*rec).p           = p;
-  (*rec).normal      = normalize(n);
-  (*rec).frontface   = ff;
+  let frontface = dot(r.direction, outward) < 0.0;
+  // guarde o sinal e oriente a normal para fora (faceforward)
+  (*rec).frontface = frontface;
+  (*rec).normal    = select(-outward, outward, frontface);
+  (*rec).p         = p;
+  (*rec).t         = t;
   (*rec).hit_anything = true;
 }
 
